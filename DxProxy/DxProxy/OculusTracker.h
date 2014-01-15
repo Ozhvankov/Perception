@@ -30,8 +30,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef OCULUSTRACKER_H_INCLUDED
 #define OCULUSTRACKER_H_INCLUDED
 
-#define PI 3.141592654
-#define RADIANS_TO_DEGREES(rad) ((float) rad * (float) (180.0 / PI))
+#define RADIANS_TO_DEGREES(rad) ((float) rad * (float) (180.0 / M_PI))
 
 #include "MotionTracker.h"
 #include "..\..\LibOVR\Include\OVR.h"  

@@ -146,7 +146,7 @@ void OculusTracker::updateOrientation()
 		// Set current data.
 		currentYaw = yaw;
 		currentPitch = pitch;
-		currentRoll = (float)( roll * (PI/180.0) * multiplierRoll);	// convert from deg to radians then apply mutiplier
+		currentRoll = (float)( roll * (M_PI/180.0) * multiplierRoll);	// convert from deg to radians then apply multiplier
 	}
 }
 

@@ -34,6 +34,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define MAX_VRBOOST_VALUES 256
 #define BRASSA_PIXEL_WIDTH 1920
 #define BRASSA_PIXEL_HEIGHT 1080
+#define _USE_MATH_DEFINES
 
 #include "Direct3DDevice9.h"
 
@@ -371,6 +372,18 @@ public:
 	* XInput controller buttons.
 	***/
 	bool m_xButtons[16];
+	/*
+	 * Max number of pixel shader constant regs supported by shader version 2.0
+	 */
+	static const int MAX_PIXEL_SHADER_CONST_2_0 = 32;
+	/*
+	 * Max number of pixel shader constant regs supported by shader version 2.X
+	 */
+	static const int MAX_PIXEL_SHADER_CONST_2_X = 32;
+	/*
+	 * Max number of pixel shader constant regs supported by shader version 3.0
+	 */
+	static const int MAX_PIXEL_SHADER_CONST_3_0 = 224;
 
 protected:
 	/*** D3DProxyDevice protected methods ***/
@@ -749,6 +762,14 @@ private:
 	* True if screenshot is taken next frame.
 	***/
 	int screenshot;
+	/*
+	 * Just a number that is a small float.
+	 */
+	static const float SMALL_FLOAT;
+	/*
+	 * A number that is almost one, but not quite.
+	 */
+	static const float SLIGHTLY_LESS_THAN_ONE;
 };
 
 #endif

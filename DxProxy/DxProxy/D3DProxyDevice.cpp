@@ -46,17 +46,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define KEY_DOWN(vk_code) (((GetAsyncKeyState(vk_code) & 0x8000) ? 1 : 0) || ((vk_code >= 0xD0) && (vk_code<=0xDF) && (m_xButtons[vk_code%0x10])))
 #define KEY_UP(vk_code) ((GetAsyncKeyState(vk_code) & 0x8000) ? 0 : 1)
 
-#define SMALL_FLOAT 0.001f
-#define	SLIGHTLY_LESS_THAN_ONE 0.999f
-
 #define PI 3.141592654
 #define RADIANS_TO_DEGREES(rad) ((float) rad * (float) (180.0 / PI))
 
 #define OUTPUT_HRESULT(hr) { _com_error err(hr); LPCTSTR errMsg = err.ErrorMessage(); OutputDebugString(errMsg); }
 
-#define MAX_PIXEL_SHADER_CONST_2_0 32
-#define MAX_PIXEL_SHADER_CONST_2_X 32
-#define MAX_PIXEL_SHADER_CONST_3_0 224
+const float D3DProxyDevice::SMALL_FLOAT = 0.001f;
+const float D3DProxyDevice::SLIGHTLY_LESS_THAN_ONE = 0.999f;
 
 /**
 * Returns the mouse wheel scroll lines.
