@@ -557,6 +557,9 @@ private:
 	HRESULT SetStereoProjectionTransform(D3DXMATRIX pLeftMatrix, D3DXMATRIX pRightMatrix, bool apply);
 	void    SetGUIViewport();
 	float   RoundBrassaValue(float val);
+	void	InitKeyNameList();
+	void	InitBrassa();
+	bool	InitVRBoost();
 
 	/*** VRboost function pointer typedefs ***/
 	typedef HRESULT (WINAPI *LPVRBOOST_LoadMemoryRules)(std::string processName, std::string rulesPath);

@@ -91,37 +91,8 @@ D3DProxyDevice::D3DProxyDevice(IDirect3DDevice9* pDevice, BaseDirect3D9* pCreate
 	m_activeSwapChains(),
 	m_gameXScaleUnits()
 {
-	OutputDebugString("D3D ProxyDev Created\n");
-
-	// explicit VRboost dll import
-	hmVRboost = LoadLibrary("VRboost.dll");
-
-	// get VRboost methods
-	if (hmVRboost != NULL)
-	{
-		// get methods explicit
-		m_pVRboost_LoadMemoryRules = (LPVRBOOST_LoadMemoryRules)GetProcAddress(hmVRboost, "VRboost_LoadMemoryRules");
-		m_pVRboost_SaveMemoryRules = (LPVRBOOST_SaveMemoryRules)GetProcAddress(hmVRboost, "VRboost_SaveMemoryRules");
-		m_pVRboost_CreateFloatMemoryRule = (LPVRBOOST_CreateFloatMemoryRule)GetProcAddress(hmVRboost, "VRboost_CreateFloatMemoryRule");
-		m_pVRboost_SetProcess = (LPVRBOOST_SetProcess)GetProcAddress(hmVRboost, "VRboost_SetProcess");
-		m_pVRboost_ReleaseAllMemoryRules = (LPVRBOOST_ReleaseAllMemoryRules)GetProcAddress(hmVRboost, "VRboost_ReleaseAllMemoryRules");
-		m_pVRboost_ApplyMemoryRules = (LPVRBOOST_ApplyMemoryRules)GetProcAddress(hmVRboost, "VRboost_ApplyMemoryRules");
-		if ((!m_pVRboost_LoadMemoryRules) || 
-			(!m_pVRboost_SaveMemoryRules) || 
-			(!m_pVRboost_CreateFloatMemoryRule) || 
-			(!m_pVRboost_SetProcess) || 
-			(!m_pVRboost_ReleaseAllMemoryRules) || 
-			(!m_pVRboost_ApplyMemoryRules))
-		{
-			hmVRboost = NULL;
-			FreeLibrary(hmVRboost);
-		}
-		else
-		{
-			OutputDebugString("Success loading VRboost methods.");
-		}
-	}
-
+	OutputDebugString("D3D ProxyDev Creating\n");
+	InitVRBoost();
 	// rift info
 	HMDisplayInfo defaultInfo; 
 	m_spShaderViewAdjustment = std::make_shared<ViewAdjustment>(defaultInfo, 1.0f, false);
@@ -167,204 +138,10 @@ D3DProxyDevice::D3DProxyDevice(IDirect3DDevice9* pDevice, BaseDirect3D9* pCreate
 
 	m_bInBeginEndStateBlock = false;
 	m_pCapturingStateTo = NULL;
-
-	m_isFirstBeginSceneOfFrame = true;
-	menuTime = (float)GetTickCount()/1000.0f;
-
-	ZeroMemory(&m_configBackup, sizeof(m_configBackup));
-
-	yaw_mode = 0;
-	pitch_mode = 0;
-	translation_mode = 0;
 	trackingOn = true;
-
-	BRASSA_mode = BRASSA_Modes::INACTIVE;
-	borderTopHeight = 0.0f;
-	menuTopHeight = 0.0f;
-	menuVelocity = D3DXVECTOR2(0.0f, 0.0f);
-	menuAttraction = D3DXVECTOR2(0.0f, 0.0f);
-	hud3DDepthMode = HUD_3D_Depth_Modes::HUD_DEFAULT;
-	gui3DDepthMode = GUI_3D_Depth_Modes::GUI_DEFAULT;
-	oldHudMode = HUD_3D_Depth_Modes::HUD_DEFAULT;
-	oldGuiMode = GUI_3D_Depth_Modes::GUI_DEFAULT;
-	hud3DDepthPresets[0] = 0.0f;
-	hud3DDepthPresets[1] = 0.0f;
-	hud3DDepthPresets[2] = 0.0f;
-	hud3DDepthPresets[3] = 0.0f;
-	hudDistancePresets[0] = 0.5f;
-	hudDistancePresets[1] = 0.9f;
-	hudDistancePresets[2] = 0.3f;
-	hudDistancePresets[3] = 0.0f;
-	gui3DDepthPresets[0] = 0.0f;
-	gui3DDepthPresets[1] = 0.0f;
-	gui3DDepthPresets[2] = 0.0f;
-	gui3DDepthPresets[3] = 0.0f;
-	guiSquishPresets[0] = 0.6f;
-	guiSquishPresets[1] = 0.5f;
-	guiSquishPresets[2] = 0.9f;
-	guiSquishPresets[3] = 1.0f;
-	ChangeHUD3DDepthMode(HUD_3D_Depth_Modes::HUD_DEFAULT);
-	ChangeGUI3DDepthMode(GUI_3D_Depth_Modes::GUI_DEFAULT);
-
-	hotkeyCatch = false;
-	resetVRBoostHotkey = 0;
-	for (int i = 0; i < 5; i++)
-	{
-		guiHotkeys[i] = 0;
-		hudHotkeys[i] = 0;
-	}
-	for (int i = 0; i < 16; i++)
-		m_xButtons[i] = false;
-
-#pragma region virtual keys name list
-	for (int i = 0; i < 256; i++)
-		keyNameList[i] = "-";
-	keyNameList[0x01] = "Left mouse button";
-	keyNameList[0x02] = "Right mouse button";
-	keyNameList[0x03] = "Control-break processing";
-	keyNameList[0x04] = "Middle mouse button (three-button mouse)";
-	keyNameList[0x08] = "BACKSPACE key";
-	keyNameList[0x09] = "TAB key";
-	keyNameList[0x0C] = "CLEAR key";
-	keyNameList[0x0D] = "ENTER key";
-	keyNameList[0x10] = "SHIFT key";
-	keyNameList[0x11] = "CTRL key";
-	keyNameList[0x12] = "ALT key";
-	keyNameList[0x13] = "PAUSE key";
-	keyNameList[0x14] = "CAPS LOCK key";
-	keyNameList[0x1B] = "ESC key";
-	keyNameList[0x20] = "SPACEBAR";
-	keyNameList[0x21] = "PAGE UP key";
-	keyNameList[0x22] = "PAGE DOWN key";
-	keyNameList[0x23] = "END key";
-	keyNameList[0x24] = "HOME key";
-	keyNameList[0x25] = "LEFT ARROW key";
-	keyNameList[0x26] = "UP ARROW key";
-	keyNameList[0x27] = "RIGHT ARROW key";
-	keyNameList[0x28] = "DOWN ARROW key";
-	keyNameList[0x29] = "SELECT key";
-	keyNameList[0x2A] = "PRINT key";
-	keyNameList[0x2B] = "EXECUTE key";
-	keyNameList[0x2C] = "PRINT SCREEN key";
-	keyNameList[0x2D] = "INS key";
-	keyNameList[0x2E] = "DEL key";
-	keyNameList[0x2F] = "HELP key";
-	keyNameList[0x30] = "0 key";
-	keyNameList[0x31] = "1 key";
-	keyNameList[0x32] = "2 key";
-	keyNameList[0x33] = "3 key";
-	keyNameList[0x34] = "4 key";
-	keyNameList[0x35] = "5 key";
-	keyNameList[0x36] = "6 key";
-	keyNameList[0x37] = "7 key";
-	keyNameList[0x38] = "8 key";
-	keyNameList[0x39] = "9 key";
-	keyNameList[0x41] = "A key";
-	keyNameList[0x42] = "B key";
-	keyNameList[0x43] = "C key";
-	keyNameList[0x44] = "D key";
-	keyNameList[0x45] = "E key";
-	keyNameList[0x46] = "F key";
-	keyNameList[0x47] = "G key";
-	keyNameList[0x48] = "H key";
-	keyNameList[0x49] = "I key";
-	keyNameList[0x4A] = "J key";
-	keyNameList[0x4B] = "K key";
-	keyNameList[0x4C] = "L key";
-	keyNameList[0x4D] = "M key";
-	keyNameList[0x4E] = "N key";
-	keyNameList[0x4F] = "O key";
-	keyNameList[0x50] = "P key";
-	keyNameList[0x51] = "Q key";
-	keyNameList[0x52] = "R key";
-	keyNameList[0x53] = "S key";
-	keyNameList[0x54] = "T key";
-	keyNameList[0x55] = "U key";
-	keyNameList[0x56] = "V key";
-	keyNameList[0x57] = "W key";
-	keyNameList[0x58] = "X key";
-	keyNameList[0x59] = "Y key";
-	keyNameList[0x5A] = "Z key";
-	keyNameList[0x60] = "Numeric keypad 0 key";
-	keyNameList[0x61] = "Numeric keypad 1 key";
-	keyNameList[0x62] = "Numeric keypad 2 key";
-	keyNameList[0x63] = "Numeric keypad 3 key";
-	keyNameList[0x64] = "Numeric keypad 4 key";
-	keyNameList[0x65] = "Numeric keypad 5 key";
-	keyNameList[0x66] = "Numeric keypad 6 key";
-	keyNameList[0x67] = "Numeric keypad 7 key";
-	keyNameList[0x68] = "Numeric keypad 8 key";
-	keyNameList[0x69] = "Numeric keypad 9 key";
-	keyNameList[0x6C] = "Separator key";
-	keyNameList[0x6D] = "Subtract key";
-	keyNameList[0x6E] = "Decimal key";
-	keyNameList[0x6F] = "Divide key";
-	keyNameList[0x70] = "F1 key";
-	keyNameList[0x71] = "F2 key";
-	keyNameList[0x72] = "F3 key";
-	keyNameList[0x73] = "F4 key";
-	keyNameList[0x74] = "F5 key";
-	keyNameList[0x75] = "F6 key";
-	keyNameList[0x76] = "F7 key";
-	keyNameList[0x77] = "F8 key";
-	keyNameList[0x78] = "F9 key";
-	keyNameList[0x79] = "F10 key";
-	keyNameList[0x7A] = "F11 key";
-	keyNameList[0x7B] = "F12 key";
-	keyNameList[0x7C] = "F13 key";
-	keyNameList[0x7D] = "F14 key";
-	keyNameList[0x7E] = "F15 key";
-	keyNameList[0x7F] = "F16 key";
-	keyNameList[0x80] = "F17 key";
-	keyNameList[0x81] = "F18 key";
-	keyNameList[0x82] = "F19 key";
-	keyNameList[0x83] = "F20 key";
-	keyNameList[0x84] = "F21 key";
-	keyNameList[0x85] = "F22 key";
-	keyNameList[0x86] = "F23 key";
-	keyNameList[0x87] = "F24 key";
-	keyNameList[0x90] = "NUM LOCK key";
-	keyNameList[0x91] = "SCROLL LOCK key";
-	keyNameList[0xA0] = "Left SHIFT key";
-	keyNameList[0xA1] = "Right SHIFT key";
-	keyNameList[0xA2] = "Left CONTROL key";
-	keyNameList[0xA3] = "Right CONTROL key";
-	keyNameList[0xA4] = "Left MENU key";
-	keyNameList[0xA5] = "Right MENU key";
-	/// XInput hotkeys from 0xD0 to 0xDF
-	keyNameList[0xD0] = "DPAD UP";
-	keyNameList[0xD1] = "DPAD DOWN";
-	keyNameList[0xD2] = "DPAD LEFT";
-	keyNameList[0xD3] = "DPAD RIGHT";
-	keyNameList[0xD4] = "START";
-	keyNameList[0xD5] = "BACK";
-	keyNameList[0xD6] = "LEFT THUMB";
-	keyNameList[0xD7] = "RIGHT THUMB";
-	keyNameList[0xD8] = "LEFT SHOULDER";
-	keyNameList[0xD9] = "RIGHT SHOULDER";
-	keyNameList[0xDC] = "Button A";
-	keyNameList[0xDD] = "Button B";
-	keyNameList[0xDE] = "Button X";
-	keyNameList[0xDF] = "Button Y";
-	/// end of XInput hotkeys
-	keyNameList[0xFA] = "Play key";
-	keyNameList[0xFB] = "Zoom key";
-#pragma endregion
-
-	screenshot = (int)false;
-	VRboostRulesSaved = false; // TODO !! delete
-	m_VRboostRulesPresent = false;
-	m_bForceMouseEmulation = false;
-	m_VertexShaderCount = 0;
-	m_VertexShaderCountLastFrame = 0;
-
-	// set common default VRBoost values
-	ZeroMemory(&VRBoostValue[0], MAX_VRBOOST_VALUES*sizeof(float));
-	VRBoostValue[VRboostAxis::Zero] = 0.0f;
-	VRBoostValue[VRboostAxis::One] = 1.0f;
-	VRBoostValue[VRboostAxis::WorldFOV] = 95.0f;
-	VRBoostValue[VRboostAxis::PlayerFOV] = 125.0f;
-	VRBoostValue[VRboostAxis::FarPlaneFOV] = 95.0f;
+	m_isFirstBeginSceneOfFrame = true;
+	InitBrassa();
+	InitKeyNameList();
 }
 
 /**
@@ -419,15 +196,8 @@ HRESULT WINAPI D3DProxyDevice::QueryInterface(REFIID riid, LPVOID* ppv)
 ***/
 HRESULT WINAPI D3DProxyDevice::TestCooperativeLevel()
 {
-	HRESULT result = BaseDirect3DDevice9::TestCooperativeLevel();
-
-	if( result == D3DERR_DEVICENOTRESET ) {
-
-		// The calling application will start releasing resources after TestCooperativeLevel returns D3DERR_DEVICENOTRESET.
-
-	}
-
-	return result;
+	return BaseDirect3DDevice9::TestCooperativeLevel();
+	//if result == D3DERR_DEVICENOTRESET Then the calling application will start releasing resources after TestCooperativeLevel returns D3DERR_DEVICENOTRESET.
 }
 
 /**
@@ -443,7 +213,7 @@ HRESULT WINAPI D3DProxyDevice::SetCursorProperties(UINT XHotSpot, UINT YHotSpot,
 
 /**
 * Creates a proxy (or wrapped) swap chain.
-* @param pSwapChain [in, ou] Proxy (wrapped) swap chain to be returned.
+* @param pSwapChain [in, out] Proxy (wrapped) swap chain to be returned.
 ***/
 HRESULT WINAPI D3DProxyDevice::CreateAdditionalSwapChain(D3DPRESENT_PARAMETERS* pPresentationParameters,IDirect3DSwapChain9** pSwapChain)
 {
@@ -564,7 +334,7 @@ HRESULT WINAPI D3DProxyDevice::GetBackBuffer(UINT iSwapChain,UINT iBackBuffer,D3
 {
 	HRESULT result;
 	try {
-		result = m_activeSwapChains.at(iSwapChain)->GetBackBuffer(iBackBuffer, D3DBACKBUFFER_TYPE_MONO, ppBackBuffer);
+		result = m_activeSwapChains.at(iSwapChain)->GetBackBuffer(iBackBuffer, Type, ppBackBuffer);
 		// ref count increase happens in the swapchain GetBackBuffer so we don't add another ref here as we are just passing the value through
 	}
 	catch (std::out_of_range) {
@@ -1072,8 +842,7 @@ HRESULT WINAPI D3DProxyDevice::GetDepthStencilSurface(IDirect3DSurface9** ppZSte
 }
 
 /**
-* Updates tracker, handles controls if this the first scene of the frame.
-* TODO !! handle tracking is currently done here - Do this as late in frame as possible (Present)? 
+* Updates tracker if device behaviour says it should. Handles controls if this is the first scene of the frame. 
 * Because input for this frame would already have been handled here so injection of any mouse 
 * manipulation ?
 ***/
@@ -1092,7 +861,7 @@ HRESULT WINAPI D3DProxyDevice::BeginScene()
 		// set last frame vertex shader count
 		m_VertexShaderCountLastFrame = m_VertexShaderCount;
 
-		// avoid squished viewport in case of brassa menu beeing drawn
+		// avoid squished viewport in case of brassa menu being drawn
 		if ((m_bViewportIsSquished) && (BRASSA_mode>=BRASSA_Modes::MAINMENU) && (BRASSA_mode<BRASSA_Modes::BRASSA_ENUM_RANGE))
 		{
 			if (m_bViewportIsSquished)
@@ -1157,7 +926,6 @@ HRESULT WINAPI D3DProxyDevice::EndScene()
 ***/
 HRESULT WINAPI D3DProxyDevice::Clear(DWORD Count,CONST D3DRECT* pRects,DWORD Flags,D3DCOLOR Color,float Z,DWORD Stencil)
 {
-
 	HRESULT result;
 	if (SUCCEEDED(result = BaseDirect3DDevice9::Clear(Count, pRects, Flags, Color, Z, Stencil))) {
 		if (switchDrawingSide()) {
@@ -1166,19 +934,17 @@ HRESULT WINAPI D3DProxyDevice::Clear(DWORD Count,CONST D3DRECT* pRects,DWORD Fla
 			if (FAILED(hr = BaseDirect3DDevice9::Clear(Count, pRects, Flags, Color, Z, Stencil))) {
 
 #ifdef _DEBUG
-				/*char buf[256];
+				char buf[256];
 				sprintf_s(buf, "Error: %s error description: %s\n",
 				DXGetErrorString(hr), DXGetErrorDescription(hr));
 
 				OutputDebugString(buf);
-				OutputDebugString("Clear failed\n");*/
+				OutputDebugString("Clear failed\n");
 
 #endif
-
 			}
 		}
 	}
-
 	return result;
 }
 
@@ -1188,24 +954,22 @@ HRESULT WINAPI D3DProxyDevice::Clear(DWORD Count,CONST D3DRECT* pRects,DWORD Fla
 ***/
 HRESULT WINAPI D3DProxyDevice::SetTransform(D3DTRANSFORMSTATETYPE State, CONST D3DMATRIX* pMatrix)
 {
+	D3DXMATRIX tempLeft;
+	D3DXMATRIX tempRight;
+	D3DXMATRIX* pMatrixToSet = NULL;
+	bool tempIsTransformSet = false;
+	if (!pMatrix) {
+		D3DXMatrixIdentity(&tempLeft);
+		D3DXMatrixIdentity(&tempRight);
+	}
+
 	if(State == D3DTS_VIEW)
 	{
-		D3DXMATRIX tempLeft;
-		D3DXMATRIX tempRight;
-		D3DXMATRIX* pViewToSet = NULL;
-		bool tempIsTransformSet = false;
-
-		if (!pMatrix) {
-			D3DXMatrixIdentity(&tempLeft);
-			D3DXMatrixIdentity(&tempRight);
-		}
-		else {
-
+		if (pMatrix)
+		{
 			D3DXMATRIX sourceMatrix(*pMatrix);
-
 			// If the view is set to the identity then we don't need to perform any adjustments
 			if (D3DXMatrixIsIdentity(&sourceMatrix)) {
-
 				D3DXMatrixIdentity(&tempLeft);
 				D3DXMatrixIdentity(&tempRight);
 			}
@@ -1213,24 +977,20 @@ HRESULT WINAPI D3DProxyDevice::SetTransform(D3DTRANSFORMSTATETYPE State, CONST D
 				// If the view matrix is modified we need to apply left/right adjustments (for stereo rendering)
 				tempLeft = sourceMatrix * m_spShaderViewAdjustment->LeftViewTransform();
 				tempRight = sourceMatrix * m_spShaderViewAdjustment->RightViewTransform();
-
 				tempIsTransformSet = true;
 			}
 		}
-
-
 		// If capturing state block capture without updating proxy device
 		if (m_pCapturingStateTo) {
 			m_pCapturingStateTo->SelectAndCaptureViewTransform(tempLeft, tempRight);
 			if (m_currentRenderingSide == vireio::Left) {
-				pViewToSet = &tempLeft;
+				pMatrixToSet = &tempLeft;
 			}
 			else {
-				pViewToSet = &tempRight;
+				pMatrixToSet = &tempRight;
 			}
 		}
 		else { // otherwise update proxy device
-
 			m_bViewTransformSet = tempIsTransformSet;
 			m_leftView = tempLeft;
 			m_rightView = tempRight;
@@ -1241,38 +1001,22 @@ HRESULT WINAPI D3DProxyDevice::SetTransform(D3DTRANSFORMSTATETYPE State, CONST D
 			else {
 				m_pCurrentView = &m_rightView;
 			}
-
-			pViewToSet = m_pCurrentView;
+			pMatrixToSet = m_pCurrentView;
 		}
-
-		return BaseDirect3DDevice9::SetTransform(State, pViewToSet);
-
+		return BaseDirect3DDevice9::SetTransform(State, pMatrixToSet);
 	}
 	else if(State == D3DTS_PROJECTION)
 	{
-
-		D3DXMATRIX tempLeft;
-		D3DXMATRIX tempRight;
-		D3DXMATRIX* pProjectionToSet = NULL;
-		bool tempIsTransformSet = false;
-
-		if (!pMatrix) {
-
-			D3DXMatrixIdentity(&tempLeft);
-			D3DXMatrixIdentity(&tempRight);
-		}
-		else {
+		if (pMatrix)
+		{
 			D3DXMATRIX sourceMatrix(*pMatrix);
-
 			// world scale mode ? in case, add all possible actual game x scale units
 			if (BRASSA_mode == BRASSA_Modes::WORLD_SCALE_CALIBRATION)
 			{
 				// store the actual projection matrix for game unit calculation
 				D3DXMATRIX m_actualProjection = D3DXMATRIX(*pMatrix);
-
 				// get the scale the 
 				float gameXScale = m_actualProjection._11;
-
 				// add if not present
 				if (std::find(m_gameXScaleUnits.begin(), m_gameXScaleUnits.end(), gameXScale) == m_gameXScaleUnits.end()) {
 					m_gameXScaleUnits.push_back(gameXScale);
@@ -1286,45 +1030,37 @@ HRESULT WINAPI D3DProxyDevice::SetTransform(D3DTRANSFORMSTATETYPE State, CONST D
 				D3DXMatrixIdentity(&tempRight);
 			}
 			else {
-
-
 				tempLeft = sourceMatrix;
 				tempRight = sourceMatrix;
 
 				tempIsTransformSet = true;
 			}			
 		}
-
 		// If capturing state block capture without updating proxy device
 		if (m_pCapturingStateTo) {
 
 			m_pCapturingStateTo->SelectAndCaptureProjectionTransform(tempLeft, tempRight);
 			if (m_currentRenderingSide == vireio::Left) {
-				pProjectionToSet = &tempLeft;
+				pMatrixToSet = &tempLeft;
 			}
 			else {
-				pProjectionToSet = &tempRight;
+				pMatrixToSet = &tempRight;
 			}
 		}
 		else { // otherwise update proxy device
-
 			m_bProjectionTransformSet = tempIsTransformSet;
 			m_leftProjection = tempLeft;
 			m_rightProjection = tempRight;
-
 			if (m_currentRenderingSide == vireio::Left) {
 				m_pCurrentProjection = &m_leftProjection;
 			}
 			else {
 				m_pCurrentProjection = &m_rightProjection;
 			}
-
-			pProjectionToSet = m_pCurrentProjection;
+			pMatrixToSet = m_pCurrentProjection;
 		}
-
-		return BaseDirect3DDevice9::SetTransform(State, pProjectionToSet);
+		return BaseDirect3DDevice9::SetTransform(State, pMatrixToSet);
 	}
-
 	return BaseDirect3DDevice9::SetTransform(State, pMatrix);
 }
 
@@ -1569,8 +1305,6 @@ HRESULT WINAPI D3DProxyDevice::DrawIndexedPrimitive(D3DPRIMITIVETYPE PrimitiveTy
 	if (SUCCEEDED(result = BaseDirect3DDevice9::DrawIndexedPrimitive(PrimitiveType, BaseVertexIndex, MinVertexIndex, NumVertices, startIndex, primCount))) {
 		if (switchDrawingSide()) {
 			HRESULT result2 = BaseDirect3DDevice9::DrawIndexedPrimitive(PrimitiveType, BaseVertexIndex, MinVertexIndex, NumVertices, startIndex, primCount);
-			if (result != result2)
-				OutputDebugString("moop\n");
 		}
 	}
 
@@ -1695,7 +1429,9 @@ HRESULT WINAPI D3DProxyDevice::SetVertexDeclaration(IDirect3DVertexDeclaration9*
 HRESULT WINAPI D3DProxyDevice::GetVertexDeclaration(IDirect3DVertexDeclaration9** ppDecl)
 {
 	if (!m_pActiveVertexDeclaration) 
-		return D3DERR_INVALIDCALL; // TODO check this is the response if no declaration set
+		// TODO check this is the response if no declaration set.  
+		//In Response to TODO:  JB, Jan 12. I believe it crashes most times this happens, tested by simply nulling out the ppDecl pointer and passing it into the base d3d method
+		return D3DERR_INVALIDCALL;
 
 	*ppDecl = m_pActiveVertexDeclaration;
 
@@ -1773,7 +1509,7 @@ HRESULT WINAPI D3DProxyDevice::SetVertexShader(IDirect3DVertexShader9* pShader)
 }
 
 /**
-* Returns the stored proxy vertex shader.
+* Returns the stored and active proxy vertex shader.
 ***/
 HRESULT WINAPI D3DProxyDevice::GetVertexShader(IDirect3DVertexShader9** ppShader)
 {
@@ -5041,4 +4777,255 @@ void D3DProxyDevice::SetGUIViewport()
 float D3DProxyDevice::RoundBrassaValue(float val)
 {
 	return (float)floor(val * 1000.0f + 0.5f) / 1000.0f;
+}
+
+/*
+ * Initializes VRBoost, must be called if you want to use vrboost.
+ * @return True if initialization is successful, false otherwise
+ */
+bool D3DProxyDevice::InitVRBoost()
+{
+	// These need to be set regardless of whether vrboost is loaded or not
+	VRboostRulesSaved = false; // TODO !! delete -  Why? 
+	m_VRboostRulesPresent = false;
+	m_VertexShaderCount = 0;
+	m_VertexShaderCountLastFrame = 0;
+
+		// set common default VRBoost values
+		ZeroMemory(&VRBoostValue[0], MAX_VRBOOST_VALUES*sizeof(float));
+	VRBoostValue[VRboostAxis::Zero] = 0.0f;
+	VRBoostValue[VRboostAxis::One] = 1.0f;
+	VRBoostValue[VRboostAxis::WorldFOV] = 95.0f;
+	VRBoostValue[VRboostAxis::PlayerFOV] = 125.0f;
+	VRBoostValue[VRboostAxis::FarPlaneFOV] = 95.0f;
+
+	// explicit VRboost dll import
+	hmVRboost = LoadLibrary("VRboost.dll");
+	
+	// get VRboost methods
+	if (hmVRboost != NULL)
+	{
+			// get methods explicit
+			m_pVRboost_LoadMemoryRules = (LPVRBOOST_LoadMemoryRules)GetProcAddress(hmVRboost, "VRboost_LoadMemoryRules");
+			m_pVRboost_SaveMemoryRules = (LPVRBOOST_SaveMemoryRules)GetProcAddress(hmVRboost, "VRboost_SaveMemoryRules");
+			m_pVRboost_CreateFloatMemoryRule = (LPVRBOOST_CreateFloatMemoryRule)GetProcAddress(hmVRboost, "VRboost_CreateFloatMemoryRule");
+			m_pVRboost_SetProcess = (LPVRBOOST_SetProcess)GetProcAddress(hmVRboost, "VRboost_SetProcess");
+			m_pVRboost_ReleaseAllMemoryRules = (LPVRBOOST_ReleaseAllMemoryRules)GetProcAddress(hmVRboost, "VRboost_ReleaseAllMemoryRules");
+			m_pVRboost_ApplyMemoryRules = (LPVRBOOST_ApplyMemoryRules)GetProcAddress(hmVRboost, "VRboost_ApplyMemoryRules");
+			if ((!m_pVRboost_LoadMemoryRules) || 
+					(!m_pVRboost_SaveMemoryRules) || 
+					(!m_pVRboost_CreateFloatMemoryRule) || 
+					(!m_pVRboost_SetProcess) || 
+					(!m_pVRboost_ReleaseAllMemoryRules) || 
+					(!m_pVRboost_ApplyMemoryRules))
+			{
+					hmVRboost = NULL;
+					FreeLibrary(hmVRboost);
+					m_bForceMouseEmulation = true;
+					return false;
+			}
+			else
+			{
+				OutputDebugString("Success loading VRboost methods.");
+				m_bForceMouseEmulation = false;
+				return true;
+			}
+	}
+	m_bForceMouseEmulation = true;
+	return false;
+}
+
+/*
+ * Initializes the stuff needed for the BRASSA menu
+ */
+void D3DProxyDevice::InitBrassa()
+{
+	menuTime = (float)GetTickCount()/1000.0f;
+	screenshot = (int)false;
+
+	ZeroMemory(&m_configBackup, sizeof(m_configBackup));
+
+	yaw_mode = 0;
+	pitch_mode = 0;
+	translation_mode = 0;
+
+
+	BRASSA_mode = BRASSA_Modes::INACTIVE;
+	borderTopHeight = 0.0f;
+	menuTopHeight = 0.0f;
+	menuVelocity = D3DXVECTOR2(0.0f, 0.0f);
+	menuAttraction = D3DXVECTOR2(0.0f, 0.0f);
+	hud3DDepthMode = HUD_3D_Depth_Modes::HUD_DEFAULT;
+	gui3DDepthMode = GUI_3D_Depth_Modes::GUI_DEFAULT;
+	oldHudMode = HUD_3D_Depth_Modes::HUD_DEFAULT;
+	oldGuiMode = GUI_3D_Depth_Modes::GUI_DEFAULT;
+	hud3DDepthPresets[0] = 0.0f;
+	hud3DDepthPresets[1] = 0.0f;
+	hud3DDepthPresets[2] = 0.0f;
+	hud3DDepthPresets[3] = 0.0f;
+	hudDistancePresets[0] = 0.5f;
+	hudDistancePresets[1] = 0.9f;
+	hudDistancePresets[2] = 0.3f;
+	hudDistancePresets[3] = 0.0f;
+	gui3DDepthPresets[0] = 0.0f;
+	gui3DDepthPresets[1] = 0.0f;
+	gui3DDepthPresets[2] = 0.0f;
+	gui3DDepthPresets[3] = 0.0f;
+	guiSquishPresets[0] = 0.6f;
+	guiSquishPresets[1] = 0.5f;
+	guiSquishPresets[2] = 0.9f;
+	guiSquishPresets[3] = 1.0f;
+	ChangeHUD3DDepthMode(HUD_3D_Depth_Modes::HUD_DEFAULT);
+	ChangeGUI3DDepthMode(GUI_3D_Depth_Modes::GUI_DEFAULT);
+
+	hotkeyCatch = false;
+	resetVRBoostHotkey = 0;
+	for (int i = 0; i < 5; i++)
+	{
+		guiHotkeys[i] = 0;
+		hudHotkeys[i] = 0;
+	}
+}
+
+/*
+ * Initializes keyNameList, if an element is not set in this initialization it will be a hyphen ('-').
+ * Also defaults m_xbuttons.
+ */
+void D3DProxyDevice::InitKeyNameList()
+{
+	for (int i = 0; i < 256; i++)
+		keyNameList[i] = "-";
+	keyNameList[0x01] = "Left mouse button";
+	keyNameList[0x02] = "Right mouse button";
+	keyNameList[0x03] = "Control-break processing";
+	keyNameList[0x04] = "Middle mouse button (three-button mouse)";
+	keyNameList[0x08] = "BACKSPACE key";
+	keyNameList[0x09] = "TAB key";
+	keyNameList[0x0C] = "CLEAR key";
+	keyNameList[0x0D] = "ENTER key";
+	keyNameList[0x10] = "SHIFT key";
+	keyNameList[0x11] = "CTRL key";
+	keyNameList[0x12] = "ALT key";
+	keyNameList[0x13] = "PAUSE key";
+	keyNameList[0x14] = "CAPS LOCK key";
+	keyNameList[0x1B] = "ESC key";
+	keyNameList[0x20] = "SPACEBAR";
+	keyNameList[0x21] = "PAGE UP key";
+	keyNameList[0x22] = "PAGE DOWN key";
+	keyNameList[0x23] = "END key";
+	keyNameList[0x24] = "HOME key";
+	keyNameList[0x25] = "LEFT ARROW key";
+	keyNameList[0x26] = "UP ARROW key";
+	keyNameList[0x27] = "RIGHT ARROW key";
+	keyNameList[0x28] = "DOWN ARROW key";
+	keyNameList[0x29] = "SELECT key";
+	keyNameList[0x2A] = "PRINT key";
+	keyNameList[0x2B] = "EXECUTE key";
+	keyNameList[0x2C] = "PRINT SCREEN key";
+	keyNameList[0x2D] = "INS key";
+	keyNameList[0x2E] = "DEL key";
+	keyNameList[0x2F] = "HELP key";
+	keyNameList[0x30] = "0 key";
+	keyNameList[0x31] = "1 key";
+	keyNameList[0x32] = "2 key";
+	keyNameList[0x33] = "3 key";
+	keyNameList[0x34] = "4 key";
+	keyNameList[0x35] = "5 key";
+	keyNameList[0x36] = "6 key";
+	keyNameList[0x37] = "7 key";
+	keyNameList[0x38] = "8 key";
+	keyNameList[0x39] = "9 key";
+	keyNameList[0x41] = "A key";
+	keyNameList[0x42] = "B key";
+	keyNameList[0x43] = "C key";
+	keyNameList[0x44] = "D key";
+	keyNameList[0x45] = "E key";
+	keyNameList[0x46] = "F key";
+	keyNameList[0x47] = "G key";
+	keyNameList[0x48] = "H key";
+	keyNameList[0x49] = "I key";
+	keyNameList[0x4A] = "J key";
+	keyNameList[0x4B] = "K key";
+	keyNameList[0x4C] = "L key";
+	keyNameList[0x4D] = "M key";
+	keyNameList[0x4E] = "N key";
+	keyNameList[0x4F] = "O key";
+	keyNameList[0x50] = "P key";
+	keyNameList[0x51] = "Q key";
+	keyNameList[0x52] = "R key";
+	keyNameList[0x53] = "S key";
+	keyNameList[0x54] = "T key";
+	keyNameList[0x55] = "U key";
+	keyNameList[0x56] = "V key";
+	keyNameList[0x57] = "W key";
+	keyNameList[0x58] = "X key";
+	keyNameList[0x59] = "Y key";
+	keyNameList[0x5A] = "Z key";
+	keyNameList[0x60] = "Numeric keypad 0 key";
+	keyNameList[0x61] = "Numeric keypad 1 key";
+	keyNameList[0x62] = "Numeric keypad 2 key";
+	keyNameList[0x63] = "Numeric keypad 3 key";
+	keyNameList[0x64] = "Numeric keypad 4 key";
+	keyNameList[0x65] = "Numeric keypad 5 key";
+	keyNameList[0x66] = "Numeric keypad 6 key";
+	keyNameList[0x67] = "Numeric keypad 7 key";
+	keyNameList[0x68] = "Numeric keypad 8 key";
+	keyNameList[0x69] = "Numeric keypad 9 key";
+	keyNameList[0x6C] = "Separator key";
+	keyNameList[0x6D] = "Subtract key";
+	keyNameList[0x6E] = "Decimal key";
+	keyNameList[0x6F] = "Divide key";
+	keyNameList[0x70] = "F1 key";
+	keyNameList[0x71] = "F2 key";
+	keyNameList[0x72] = "F3 key";
+	keyNameList[0x73] = "F4 key";
+	keyNameList[0x74] = "F5 key";
+	keyNameList[0x75] = "F6 key";
+	keyNameList[0x76] = "F7 key";
+	keyNameList[0x77] = "F8 key";
+	keyNameList[0x78] = "F9 key";
+	keyNameList[0x79] = "F10 key";
+	keyNameList[0x7A] = "F11 key";
+	keyNameList[0x7B] = "F12 key";
+	keyNameList[0x7C] = "F13 key";
+	keyNameList[0x7D] = "F14 key";
+	keyNameList[0x7E] = "F15 key";
+	keyNameList[0x7F] = "F16 key";
+	keyNameList[0x80] = "F17 key";
+	keyNameList[0x81] = "F18 key";
+	keyNameList[0x82] = "F19 key";
+	keyNameList[0x83] = "F20 key";
+	keyNameList[0x84] = "F21 key";
+	keyNameList[0x85] = "F22 key";
+	keyNameList[0x86] = "F23 key";
+	keyNameList[0x87] = "F24 key";
+	keyNameList[0x90] = "NUM LOCK key";
+	keyNameList[0x91] = "SCROLL LOCK key";
+	keyNameList[0xA0] = "Left SHIFT key";
+	keyNameList[0xA1] = "Right SHIFT key";
+	keyNameList[0xA2] = "Left CONTROL key";
+	keyNameList[0xA3] = "Right CONTROL key";
+	keyNameList[0xA4] = "Left MENU key";
+	keyNameList[0xA5] = "Right MENU key";
+	/// XInput hotkeys from 0xD0 to 0xDF
+	keyNameList[0xD0] = "DPAD UP";
+	keyNameList[0xD1] = "DPAD DOWN";
+	keyNameList[0xD2] = "DPAD LEFT";
+	keyNameList[0xD3] = "DPAD RIGHT";
+	keyNameList[0xD4] = "START";
+	keyNameList[0xD5] = "BACK";
+	keyNameList[0xD6] = "LEFT THUMB";
+	keyNameList[0xD7] = "RIGHT THUMB";
+	keyNameList[0xD8] = "LEFT SHOULDER";
+	keyNameList[0xD9] = "RIGHT SHOULDER";
+	keyNameList[0xDC] = "Button A";
+	keyNameList[0xDD] = "Button B";
+	keyNameList[0xDE] = "Button X";
+	keyNameList[0xDF] = "Button Y";
+	/// end of XInput hotkeys
+	keyNameList[0xFA] = "Play key";
+	keyNameList[0xFB] = "Zoom key";
+
+	for (int i = 0; i < 16; i++)
+		m_xButtons[i] = false;
 }
