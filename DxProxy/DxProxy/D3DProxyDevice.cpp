@@ -46,8 +46,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define KEY_DOWN(vk_code) (((GetAsyncKeyState(vk_code) & 0x8000) ? 1 : 0) || ((vk_code >= 0xD0) && (vk_code<=0xDF) && (m_xButtons[vk_code%0x10])))
 #define KEY_UP(vk_code) ((GetAsyncKeyState(vk_code) & 0x8000) ? 0 : 1)
 
-#define PI 3.141592654
-#define RADIANS_TO_DEGREES(rad) ((float) rad * (float) (180.0 / PI))
+#define RADIANS_TO_DEGREES(rad) ((float) rad * (float) (180.0 / M_PI))
 
 #define OUTPUT_HRESULT(hr) { _com_error err(hr); LPCTSTR errMsg = err.ErrorMessage(); OutputDebugString(errMsg); }
 
@@ -1857,7 +1856,6 @@ HRESULT WINAPI D3DProxyDevice::CreateRenderTarget(UINT Width, UINT Height, D3DFO
 
 		/* "If Needed" heuristic is the complicated part here.
 		Fixed heuristics (based on type, format, size, etc) + game specific overrides + isForcedMono + magic? */
-		// TODO Should we duplicate this Render Target? Replace "true" with heuristic
 		if (m_pGameHandler->ShouldDuplicateRenderTarget(Width, Height, Format, MultiSample, MultisampleQuality, Lockable, isSwapChainBackBuffer))
 		{
 			if (FAILED(BaseDirect3DDevice9::CreateRenderTarget(Width, Height, Format, MultiSample, MultisampleQuality, Lockable, &pRightRenderTarget, pSharedHandle))) {

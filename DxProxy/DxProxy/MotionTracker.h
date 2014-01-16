@@ -29,9 +29,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #ifndef MOTIONTRACKER_H_INCLUDED
 #define MOTIONTRACKER_H_INCLUDED
-
+#define _USE_MATH_DEFINES
 #include <math.h>
 #include <windows.h>
+
+#define RADIANS_TO_DEGREES(rad) ((float) rad * (float) (180.0 / M_PI))
 
 /**
 *  Base motion tracker class. 
