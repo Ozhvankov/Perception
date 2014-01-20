@@ -2083,25 +2083,18 @@ void D3DProxyDevice::HandleTracking()
 	}
 	if(!trackerInitialized)
 	{
-		// VRboost rules present ?
-		if (config.VRboostPath != "") m_VRboostRulesPresent = true; else m_VRboostRulesPresent = false;
-
-		OutputDebugString("Try to init Tracker\n");
-		tracker = MotionTrackerFactory::Get(config);
-		tracker->setMultipliers(config.yaw_multiplier, config.pitch_multiplier, config.roll_multiplier);
-		tracker->setMouseEmulation((!m_VRboostRulesPresent) || (hmVRboost==NULL));
-		trackerInitialized = true;
+		InitTracker();
 	}
 
 	if(trackerInitialized && tracker->isAvailable())
 	{
 		tracker->updateOrientation();
+		// update view adjustment class
+		if (m_spShaderViewAdjustment->RollEnabled()) {
+			m_spShaderViewAdjustment->UpdateRoll(tracker->currentRoll);
+		}
 	}
-
-	// update view adjustment class
-	if (trackerInitialized && tracker->isAvailable() && m_spShaderViewAdjustment->RollEnabled()) {
-		m_spShaderViewAdjustment->UpdateRoll(tracker->currentRoll);
-	}
+	//TODO: Should probably check for tracker init here as well, come back and decide.
 	m_spShaderViewAdjustment->UpdatePitchYaw(tracker->primaryPitch, tracker->primaryYaw);
 
 	m_spShaderViewAdjustment->ComputeViewTransforms();
@@ -2128,7 +2121,7 @@ void D3DProxyDevice::HandleTracking()
 				if (config.VRboostPath != "")
 					m_pVRboost_LoadMemoryRules(config.game_exe, config.VRboostPath);
 			}
-			else
+			else //TODO: Do we need this anymore?
 			{
 				// EXAMPLE : Create shader rules
 				m_pVRboost_ReleaseAllMemoryRules();
@@ -2146,7 +2139,7 @@ void D3DProxyDevice::HandleTracking()
 						DWORD cOffsets1[] = { 3, 0x628, 0x58, 0x1d0, 0x00, 0x00};
 						DWORD cOffsets2[] = { 3, 0x738, 0x58, 0x1d0, 0x00, 0x00};
 
-						// create skyrim shader rules here
+						// create bioshock shader rules here
 						m_pVRboost_CreateFloatMemoryRule((DWORD)FloatUnrealCompass, (UINT)TrackerYaw, D3DXVECTOR4(), 0x0034BC, offsets, 0x01000000, 0x2A000000, 0x00057B20, cOffsets1, 0, 0x000057C30, cOffsets2, 0);
 					}
 					// create offsets : pitch
@@ -2155,7 +2148,7 @@ void D3DProxyDevice::HandleTracking()
 						DWORD cOffsets1[] = { 3, 0x4, 0x4c, 0x1cc, 0x0, 0x0};
 						DWORD cOffsets2[] = { 3, 0x4, 0x50, 0x1cc, 0x0, 0x0};
 
-						// create skyrim shader rules here
+						// create bioshock shader rules here
 						m_pVRboost_CreateFloatMemoryRule((DWORD)FloatUnrealAxis, (UINT)TrackerPitch, D3DXVECTOR4(), 0x004D15AC, offsets, 0x01000000, 0x2A000000, 0x004D15AC, cOffsets1, 0, 0x004D15AC, cOffsets2, 0);
 					}
 				}
@@ -5026,4 +5019,28 @@ void D3DProxyDevice::InitKeyNameList()
 
 	for (int i = 0; i < 16; i++)
 		m_xButtons[i] = false;
+}
+
+/*
+ * Initializes the tracker, setting the tracker initialized status.
+ * @return true if tracker was initialized, false otherwise
+ */
+bool D3DProxyDevice::InitTracker()
+{
+	// VRboost rules present ?
+	if (config.VRboostPath != "") m_VRboostRulesPresent = true; else m_VRboostRulesPresent = false;
+
+	OutputDebugString("Try to init Tracker\n");
+	tracker = MotionTrackerFactory::Get(config);
+	if (tracker)
+	{
+		tracker->setMultipliers(config.yaw_multiplier, config.pitch_multiplier, config.roll_multiplier);
+		tracker->setMouseEmulation((!m_VRboostRulesPresent) || (hmVRboost==NULL));
+		trackerInitialized = true;
+	}
+	else
+	{
+		trackerInitialized = false;		
+	}
+	return trackerInitialized;
 }

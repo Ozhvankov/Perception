@@ -163,6 +163,7 @@ public:
 	void           SetupHUD();
 	virtual void   HandleControls(void);
 	void           HandleTracking(void);
+
 	void           HandleUpdateExtern();
 
 	/**
@@ -406,7 +407,7 @@ protected:
 	virtual void BRASSA_ChangeRules(){}
 	virtual void BRASSA_PickRules(){}
 	virtual void BRASSA_ShowActiveShaders(){}
-
+	virtual bool InitTracker();
 	/**
 	* The game handler.
 	* @see GameHandler
